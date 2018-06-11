@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>BinOps</title>
+  <script src="binops.js"></script>
+</head>
+<body>
+
+<h1>BinOps</h1>
+
+<p>A JavaScript library to perform binary operations on 53 bits. Provides replacement for the following operations:</p>
+
+<ul>
+  <li> <code>~</code>, the <code>not</code> operation     </li>
+  <li> <code>&amp;</code>, the <code>and</code> operation </li>
+  <li> <code>|</code>, the <code>or</code> operation      </li>
+  <li> <code>^</code>, the <code>xor</code> operation     </li>
+  <li> <code>&lt;&lt;</code>, the <code>left shift</code> operation </li>
+  <li> <code>&gt;&gt;&gt;</code>, the <code>unsigned right shift</code> operation </li>
+</ul>
+
+<p>Note that JavaScript can only handle exact integers up to 2<sup>53</sup> - 1, a.k.a the maximum safe integer. Beyond this value, the number will be stored as a float, which is a totally different representation, on which bitwise logic cannot apply.</p>
+
+<p>For this reason, BinOps only handles numbers that can fit on 53 bits as unsigned.</p>
+
+<p><button>Run tests</button></p>
+
+<script> "use strict";
+
+const NMSI = Number.MAX_SAFE_INTEGER;
+
+const U = 3336323405162711;
+const V = 6409499576015336;
+
+const NOT_U   = 5670875849578280;
+const U_AND_V = 774357931165888;
+const U_OR_V  = 8971465050012159;
+const U_XOR_V = 8197107118846271;
+
+// A >> L === X
+// B >> M === Y
+// C >> N === Z
+// (X, Y and Z are derived from V)
+const A = 3129638464851;
+const B = 47754493;
+const C = 728;
+const L = 11;
+const M = 27;
+const N = 43;
+const X = 6409499576014848;
+const Y = 6409499552251904;
+const Z = 6403555720167424;
+
+document.querySelector("button").addEventListener("click", (ev) => {
+  ev.preventDefault();
+
+  // not
+  testSingleValue("not(0) === 11...111", BinOps.not(0), NMSI);
+  testSingleValue("not(11...111) === 0", BinOps.not(NMSI), 0);
+  testSingleValue("not(1) === 11...110", BinOps.not(1), NMSI - 1);
+  testSingleValue("not(11...110) === 1", BinOps.not(NMSI - 1), 1);
+  testSingleValue(`not(${U}) === ${NOT_U}`, BinOps.not(U), NOT_U);
+  testAllSamples("not(not(a)) === a", a => BinOps.not(BinOps.not(a)) === a);
+
+  // and
+  testSingleValue("and(1, 2) === 0", BinOps.and(1, 2), 0);
+  testSingleValue(`and(${U}, ${V}) === ${U_AND_V}`, BinOps.and(U, V), U_AND_V);
+  testAllSamples("and(a, a)) === a",        a => BinOps.and(a, a) === a);
+  testAllSamples("and(a, 11...111)) === a", a => BinOps.and(a, NMSI) === a);
+  testAllSamples("and(a, 0)) === a",        a => BinOps.and(a, 0) === 0);
+
+  // or
+  testSingleValue(`or(${U}, ${V}) === ${U_OR_V}`, BinOps.or(U, V), U_OR_V);
+  testAllSamples("or(a, a)) === a",               a => BinOps.or(a, a) === a);
+  testAllSamples("or(a, 0)) === a",               a => BinOps.or(a, 0) === a);
+  testAllSamples("or(a, 11...111)) === 11...111", a => BinOps.or(a, NMSI) === NMSI);
+
+  // xor
+  testSingleValue(`xor(${U}, ${V}) === ${U_XOR_V}`, BinOps.xor(U, V), U_XOR_V);
+  testAllSamples("xor(a, a)) === 0",             a => BinOps.xor(a, a) === 0);
+  testAllSamples("xor(a, 0)) === a",             a => BinOps.xor(a, 0) === a);
+  testAllSamples("xor(a, 11...111)) === not(a)", a => BinOps.xor(a, NMSI) === BinOps.not(a));
+
+  // lshift
+  // cannot use testAllSamples because large values will overflow
+  testSingleValue("lshift(0, 0) === 0", BinOps.lshift(0, 0), 0);
+  testSingleValue("lshift(0, 1) === 0", BinOps.lshift(0, 1), 0);
+  testSingleValue("lshift(0, 22) === 0", BinOps.lshift(0, 22), 0);
+  testSingleValue("lshift(0, 32) === 0", BinOps.lshift(0, 32), 0);
+  testSingleValue("lshift(0, 52) === 0", BinOps.lshift(0, 52), 0);
+
+  testSingleValue("lshift(1, 0) === 1", BinOps.lshift(1, 0), 1);
+  testSingleValue("lshift(1, 1) === 2", BinOps.lshift(1, 1), 2);
+  testSingleValue("lshift(1, 21) === 2**21", BinOps.lshift(1, 21), 2**21);
+  testSingleValue("lshift(1, 22) === 2**22", BinOps.lshift(1, 22), 2**22);
+  testSingleValue("lshift(1, 30) === 2**31", BinOps.lshift(1, 30), 2**30);
+  testSingleValue("lshift(1, 31) === 2**32", BinOps.lshift(1, 31), 2**31);
+  testSingleValue("lshift(1, 52) === 2**52", BinOps.lshift(1, 52), 2**52);
+
+  testSingleValue(`lshift(${U}, 1) === ${U * 2}`, BinOps.lshift(U, 1), U * 2);
+  testSingleValue(`lshift(${A}, ${L}) === ${X}`, BinOps.lshift(A, L), X);
+  testSingleValue(`lshift(${B}, ${M}) === ${Y}`, BinOps.lshift(B, M), Y);
+  testSingleValue(`lshift(${C}, ${N}) === ${Z}`, BinOps.lshift(C, N), Z);
+
+  // urshift
+  testSingleValue(`urshift(${X}, ${L}) === ${A}`, BinOps.urshift(X, L), A);
+  testSingleValue(`urshift(${Y}, ${M}) === ${B}`, BinOps.urshift(Y, M), B);
+  testSingleValue(`urshift(${Z}, ${N}) === ${C}`, BinOps.urshift(Z, N), C);
+  testAllSamples("urshift(a, 1) === Math.floor(a/2)",
+    a => BinOps.urshift(a, 1) === Math.floor(a/2));
+  testAllSamples(`urshift(a, ${L}) === Math.floor(a/(2**${L}))`,
+    a => BinOps.urshift(a, L) === Math.floor(a/(2**L)));
+  testAllSamples(`urshift(a, ${M}) === Math.floor(a/(2**${M}))`,
+    a => BinOps.urshift(a, M) === Math.floor(a/(2**M)));
+  testAllSamples(`urshift(a, ${N}) === Math.floor(a/(2**${N}))`,
+    a => BinOps.urshift(a, N) === Math.floor(a/(2**N)));
+});
+
+var samples = [
+  0, 1, 2, 3,
+  2 ** 31 - 1, 2 ** 31, 2 ** 31 + 1,
+  2 ** 32 - 1, 2 ** 32, 2 ** 32 + 1,
+  2 ** 52 - 1, 2 ** 52, 2 ** 52 + 1,
+  NMSI - 3, NMSI - 2, NMSI - 1, NMSI,
+];
+
+function testSingleValue(label, expr, value) {
+  output(label, expr === value);
+}
+
+function testAllSamples(label, testFunction) {
+  var success = samples.every(sample => {
+    var result = testFunction(sample);
+    console.assert(result, `failed test ${label} on ${sample} (${sample.toString(16)})`);
+    return result;
+  });
+  output(label, success);
+}
+
+function output(label, success) {
+  var $p = document.createElement("p");
+  var $code = document.createElement("code");
+  $code.append(label);
+
+  var $strong = document.createElement("strong");
+  if (success) {
+    $strong.style.color = "green";
+    $strong.append("Success");
+  }
+  else {
+    $strong.style.color = "red";
+    $strong.append("Failure!");
+  }
+
+  $p.append("Test: ", $code, " ... ", $strong);
+  document.body.append($p);
+}
+
+</script>
+</body>
+</html>
